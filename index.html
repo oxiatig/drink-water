@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>可爱喝水记录器</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background-color: #e0f7fa;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #4aa3df;
+    }
+    #waterAmount {
+      font-size: 24px;
+      margin: 20px;
+    }
+    #cup {
+      width: 100px;
+      height: 120px;
+      background: linear-gradient(to top, #76c7c0 0%, #ffffff 0%);
+      border: 5px solid #76c7c0;
+      border-radius: 0 0 40px 40px;
+      margin: 0 auto 20px;
+      position: relative;
+      overflow: hidden;
+      transition: background-size 0.5s ease;
+    }
+    #cup::after {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: 20px;
+      width: 60px;
+      height: 10px;
+      background: #76c7c0;
+      border-radius: 50%;
+    }
+    button {
+      background-color: #76c7c0;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 18px;
+      border-radius: 15px;
+      cursor: pointer;
+      margin-bottom: 30px;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #5bbdb5;
+    }
+    canvas {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 20px;
+    }
+    .shake {
+      animation: shake 0.5s;
+    }
+    @keyframes shake {
+      0% { transform: translate(1px, 1px) rotate(0deg); }
+      20% { transform: translate(-1px, -2px) rotate(-1deg); }
+      40% { transform: translate(-3px, 0px) rotate(1deg); }
+      60% { transform: translate(3px, 2px) rotate(0deg); }
+      80% { transform: translate(1px, -1px) rotate(1deg); }
+      100% { transform: translate(-1px, 2px) rotate(-1deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🥤喝水记录器</h1>
+  <div id="waterAmount">今天已喝：0 ml</div>
+  <div id="cup"></div>
+  <button onclick="addWater()">+ 150 ml</button>
+
+  <canvas id="waterChart" width="400" height="300"></canvas>
+
+  <script>
+    const today = new Date().toISOString().split('T')[0];
+    let waterData = JSON.parse(localStorage.getItem('waterData')) || {};
+
+    // 初始化今天数据为0，如果没有的话
+    if (!waterData[today]) {
+      waterData[today] = 0;
+      localStorage.setItem('waterData', JSON.stringify(waterData));
+    }
+
+    // 保证连续日期（补上0ml天数）
+    function fillMissingDates() {
+      const days = 7; // 显示最近7天
+      const now = new Date();
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(now.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        if (!waterData[dateStr]) {
+          waterData[dateStr] = 0;
+        }
+      }
+      localStorage.setItem('waterData', JSON.stringify(waterData));
+    }
+
+    fillMissingDates();
+
+    const ctx = document.getElementById('waterChart').getContext('2d');
+   
+
+    const sortedDates = Object.keys(waterData).sort();
+let chart = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: sortedDates,
+    datasets: [{
+      label: '喝水量 (ml)',
+      data: sortedDates.map(date => waterData[date]),
+      backgroundColor: '#76c7c0'
+    }]
+  },
+
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true,
+            suggestedMax: 3000
+          }
+        }
+      }
+    });
+
+    function addWater() {
+      waterData[today] += 150;
+      localStorage.setItem('waterData', JSON.stringify(waterData));
+      updateDisplay();
+      animateCup();
+    }
+
+    function updateDisplay() {
+      document.getElementById('waterAmount').textContent = `今天已喝：${waterData[today]} ml`;
+      const sortedDates = Object.keys(waterData).sort();
+    chart.data.labels = sortedDates;
+    chart.data.datasets[0].data = sortedDates.map(date => waterData[date]);
+
+      chart.update();
+      updateCup();
+    }
+
+    function updateCup() {
+      const cup = document.getElementById('cup');
+      const percent = Math.min(waterData[today] / 3000, 1); // 假设目标3000ml
+      cup.style.background = `linear-gradient(to top, #76c7c0 ${percent*100}%, #ffffff ${percent*100}%)`;
+    }
+
+    function animateCup() {
+      const cup = document.getElementById('cup');
+      cup.classList.add('shake');
+      setTimeout(() => {
+        cup.classList.remove('shake');
+      }, 500);
+    }
+
+    updateDisplay();
+  </script>
+
+</body>
+</html>
